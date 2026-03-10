@@ -166,7 +166,8 @@
 
             function loadData() {
                 var xhr = new XMLHttpRequest();
-                xhr.open("GET", PROXY + encodeURIComponent(XML_URL), true);
+                // Adicionado timestamp opcional para garantir que o acesso sempre busque dado novo do servidor
+                xhr.open("GET", PROXY + encodeURIComponent(XML_URL + "?t=" + Date.now()), true);
                 xhr.onreadystatechange = function() {
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var parser = new DOMParser();
@@ -208,8 +209,8 @@
                 };
             }
 
+            // Inicia a carga da notícia única ao acessar
             loadData();
-            setInterval(loadData, 15000); // Reduzido para 15 segundos para mais dinamismo
         })();
     </script>
 
