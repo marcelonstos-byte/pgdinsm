@@ -182,7 +182,7 @@
                 <div id="clock">--:--</div>
             </div>
 
-            <img id="icon" class="icon" src="" alt="">
+            <img id="icon" class="icon" src="" alt="Ícone Clima">
             <div class="temp" id="temp">--°C</div>
             <div class="cond" id="cond">--</div>
 
@@ -208,13 +208,16 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 2. CATÁLOGO DE ATIVOS
+        // 2. CATÁLOGO DE ATIVOS (Caminhos Revisados)
         const CATALOG = {
+            // Backgrounds
             DiaAberto: "Icons/DiaAberto.jpg",
             NoiteAberta: "Icons/NoiteAberta.jpg",
             Chuvoso: "Icons/Chuvoso.jpg",
             Nublado: "Icons/Nublado.jpg",
             tempestade: "Icons/tempestade.jpg",
+
+            // Ícones
             IconEnsolarado: "Icons/IconEnsolarado.png",
             IconNoite: "Icons/IconNoite.png",
             IconNublado: "Icons/IconNublado.png",
@@ -231,12 +234,33 @@
         let indexRegional = 0;
 
         const regioesBrasil = {
+            // --- SUDESTE ---
             "Baixada Santista": ["Bertioga, SP", "Guarujá, SP", "Santos, SP", "São Vicente, SP", "Praia Grande, SP", "Mongaguá, SP"],
             "Litoral Norte SP": ["São Sebastião, SP", "Ilhabela, SP", "Caraguatatuba, SP", "Ubatuba, SP"],
             "Grande São Paulo": ["São Paulo, SP", "Guarulhos, SP", "Osasco, SP", "São Bernardo, SP", "Santo André, SP", "Barueri, SP"],
-            "Rio de Janeiro": ["Rio de Janeiro, RJ", "Niterói, RJ", "Duque de Caxias, RJ", "Nova Iguaçu, RJ"],
-            "Grande Salvador": ["Salvador, BA", "Lauro de Freitas, BA", "Camaçari, BA"],
-            "Grande Recife": ["Recife, PE", "Olinda, PE", "Jaboatão dos Guararapes, PE"]
+            "Rio de Janeiro": ["Rio de Janeiro, RJ", "Niterói, RJ", "Duque de Caxias, RJ", "Nova Iguaçu, RJ", "São Gonçalo, RJ"],
+            "Grande Belo Horizonte": ["Belo Horizonte, MG", "Contagem, MG", "Betim, MG", "Nova Lima, MG", "Sabará, MG"],
+            "Grande Vitória": ["Vitória, ES", "Vila Velha, ES", "Serra, ES", "Cariacica, ES"],
+
+            // --- SUL ---
+            "Grande Curitiba": ["Curitiba, PR", "São José dos Pinhais, PR", "Pinhais, PR", "Araucária, PR", "Colombo, PR"],
+            "Grande Porto Alegre": ["Porto Alegre, RS", "Canoas, RS", "Novo Hamburgo, RS", "São Leopoldo, RS", "Gravataí, RS"],
+            "Grande Florianópolis": ["Florianópolis, SC", "São José, SC", "Palhoça, SC", "Biguaçu, SC"],
+
+            // --- NORDESTE ---
+            "Grande Salvador": ["Salvador, BA", "Lauro de Freitas, BA", "Camaçari, BA", "Simões Filho, BA"],
+            "Grande Recife": ["Recife, PE", "Olinda, PE", "Jaboatão dos Guararapes, PE", "Paulista, PE"],
+            "Grande Fortaleza": ["Fortaleza, CE", "Caucaia, CE", "Maracanaú, CE", "Eusébio, CE"],
+            "Grande Natal": ["Natal, RN", "Parnamirim, RN", "São Gonçalo do Amarante, RN", "Macaíba, RN"],
+
+            // --- CENTRO-OESTE ---
+            "Distrito Federal e Entorno": ["Brasília, DF", "Taguatinga, DF", "Ceilândia, DF", "Águas Lindas de Goiás, GO"],
+            "Grande Goiânia": ["Goiânia, GO", "Aparecida de Goiânia, GO", "Anápolis, GO", "Senador Canedo, GO"],
+
+            // --- NORTE ---
+            "Grande Manaus": ["Manaus, AM", "Iranduba, AM", "Manacapuru, AM", "Careiro, AM"],
+            "Grande Belém": ["Belém, PA", "Ananindeua, PA", "Marituba, PA", "Benevides, PA"]
+                // Você pode alimentar esta lista com as regiões de atuação do seu software.
         };
 
         // 4. LÓGICA DE INTERFACE
@@ -247,18 +271,21 @@
             });
         }
 
+        // Seleção de Background baseada no código e hora
         function bgFor(code, hour) {
             const night = (hour < 6 || hour >= 18);
-            if (code <= 1) return night ? CATALOG.NoiteAberta : CATALOG.DiaAberto;
-            if (code <= 3) return CATALOG.Nublado;
+            if (code === 0 || code === 1) return night ? CATALOG.NoiteAberta : CATALOG.DiaAberto;
+            if (code === 2 || code === 3 || code === 45 || code === 48) return CATALOG.Nublado;
             if (code >= 95) return CATALOG.tempestade;
             return CATALOG.Chuvoso;
         }
 
+        // Seleção de Ícone baseada no código e hora
         function iconFor(code, hour) {
             const night = (hour < 6 || hour >= 18);
-            if (code <= 1) return night ? CATALOG.IconNoite : CATALOG.IconEnsolarado;
-            if (code <= 3) return CATALOG.IconNublado;
+            if (code === 0 || code === 1) return night ? CATALOG.IconNoite : CATALOG.IconEnsolarado;
+            if (code === 2) return CATALOG.IconEnsolarado;
+            if (code === 3 || code === 45 || code === 48) return CATALOG.IconNublado;
             if (code >= 95) return CATALOG.IconTempestade;
             return CATALOG.IconChuva;
         }
@@ -304,18 +331,22 @@
                 document.getElementById("feel").innerText = Math.round(cw.temperature) + "°C";
                 document.getElementById("cond").innerText = descFor(cw.weathercode);
                 document.getElementById("wind").innerText = cw.windspeed + " km/h";
+
+                // Aplicando Imagens do Catálogo
                 document.getElementById("bg").style.backgroundImage = `url('${bgFor(cw.weathercode, hr)}')`;
                 document.getElementById("icon").src = iconFor(cw.weathercode, hr);
                 document.getElementById("updated").innerText = "Atualizado: " + new Date().toLocaleTimeString();
 
-                // Forecast
+                // Forecast (Previsão 4 dias)
                 let html = "";
                 for (let i = 1; i <= 4; i++) {
                     const localDate = new Date(d.daily.time[i] + "T00:00:00");
                     const dayName = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][localDate.getDay()];
+                    const wc = d.daily.weathercode[i];
+
                     html += `
                         <div class="day">
-                            <img src="${iconFor(d.daily.weathercode[i], 12)}">
+                            <img src="${iconFor(wc, 12)}" alt="Previsão">
                             <div>${dayName}</div>
                             <div>${Math.round(d.daily.temperature_2m_max[i])}° / ${Math.round(d.daily.temperature_2m_min[i])}°</div>
                         </div>`;
@@ -340,7 +371,6 @@
         // 6. VÍNCULO E INICIALIZAÇÃO
         async function verificarVinculo() {
             if (!currentUid) {
-                // Escuta em tempo real se algum admin reivindica este deviceId
                 db.collectionGroup("dispositivos").where("deviceId", "==", deviceId)
                     .onSnapshot(snap => {
                         snap.forEach(doc => {
@@ -349,10 +379,12 @@
                             location.reload();
                         });
                     });
+
+                // Se não há UID, roda com Bertioga por padrão até vincular
+                init();
                 return;
             }
 
-            // Se já tem UID, carrega a cidade do banco
             const doc = await db.collection("usuarios").doc(currentUid)
                 .collection("dispositivos").doc(deviceId).get();
 
@@ -367,10 +399,9 @@
             updateClock();
             setInterval(updateClock, 1000);
             rodarSistemaClima();
-            setInterval(rodarSistemaClima, 600000); // 10 minutos
+            setInterval(rodarSistemaClima, 600000); // Roda a cada 10 minutos
         }
 
-        // Início de tudo
         verificarVinculo();
     </script>
 </body>
