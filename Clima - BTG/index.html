@@ -27,6 +27,14 @@
             background: #000;
             overflow: hidden;
             color: var(--text);
+            /* Transição suave para o corpo todo */
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+        /* Classe disparada via JS quando os dados carregam */
+        
+        body.loaded {
+            opacity: 1;
         }
         
         .bg {
@@ -55,7 +63,6 @@
             justify-content: center;
             padding: 20px;
         }
-        /* EFEITO FADE-IN INICIAL */
         
         .card {
             width: 80vw;
@@ -68,14 +75,6 @@
             flex-direction: column;
             align-items: center;
             position: relative;
-            opacity: 0;
-            /* Começa invisível */
-            transition: opacity 1s ease-in-out;
-        }
-        
-        .card.visible {
-            opacity: 1;
-            /* Torna-se visível */
         }
         
         .top {
@@ -217,7 +216,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 2. CATÁLOGO DE ATIVOS (Caminhos Corrigidos para 'icons/')
+        // 2. CATÁLOGO DE ATIVOS
         const CATALOG = {
             DiaAberto: "icons/DiaAberto.jpg",
             NoiteAberta: "icons/NoiteAberta.jpg",
@@ -345,10 +344,10 @@
                 }
                 document.getElementById("forecast").innerHTML = html;
 
-                // REVELA O CARD APÓS A PRIMEIRA CARGA (EFEITO FADE-IN)
+                // REVELA O SISTEMA INTEIRO (FADE-IN DO PRETO PARA AS CORES)
                 setTimeout(() => {
-                    document.getElementById("mainCard").classList.add("visible");
-                }, 2000);
+                    document.body.classList.add("loaded");
+                }, 1000);
 
             } catch (err) {
                 console.error("Erro API Clima:", err);
@@ -404,4 +403,3 @@
 </body>
 
 </html>
-
