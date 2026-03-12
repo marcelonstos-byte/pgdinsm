@@ -367,19 +367,30 @@
 
         // 6. VÍNCULO E INICIALIZAÇÃO
         async function verificarVinculo() {
-            if (!currentUid) {
-                db.collectionGroup("dispositivos").where("deviceId", "==", deviceId)
-                    .onSnapshot(snap => {
-                        snap.forEach(doc => {
-                            const uidEncontrado = doc.ref.parent.parent.id;
-                            localStorage.setItem("painelUid", uidEncontrado);
-                            location.reload();
-                        });
-                    });
+          if (!currentUid) {
 
-                init();
-                return;
-            }
+    console.log("Aguardando vínculo do dispositivo...");
+
+    db.collectionGroup("dispositivos")
+    .where("deviceId","==",deviceId)
+    .onSnapshot(snap=>{
+
+        snap.forEach(doc=>{
+
+            const uidEncontrado = doc.ref.parent.parent.id;
+
+            localStorage.setItem("painelUid",uidEncontrado);
+
+            console.log("Dispositivo vinculado:",uidEncontrado);
+
+            location.reload();
+
+        });
+
+    });
+
+    return; // NÃO inicia o sistema ainda
+}
 
             const doc = await db.collection("usuarios").doc(currentUid)
                 .collection("dispositivos").doc(deviceId).get();
@@ -403,3 +414,4 @@
 </body>
 
 </html>
+
