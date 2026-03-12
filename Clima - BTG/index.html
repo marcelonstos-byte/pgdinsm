@@ -3,8 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Previsão do Tempo</title>
+    <title>Previsão do Tempo Profissional</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
     <style>
          :root {
             --text: #fff;
@@ -24,7 +28,6 @@
             overflow: hidden;
             color: var(--text);
         }
-        /* background full screen */
         
         .bg {
             position: fixed;
@@ -34,7 +37,6 @@
             transition: background-image .8s ease;
             z-index: 0;
         }
-        /* pelicula preta 40% */
         
         .bg .overlay {
             position: absolute;
@@ -52,11 +54,9 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
-            pointer-events: none;
         }
         
         .card {
-            pointer-events: auto;
             width: 80vw;
             max-width: 1200px;
             background: var(--glass);
@@ -85,7 +85,6 @@
             margin-top: 6px;
             font-size: 14px;
             color: var(--muted);
-            text-align: left;
             width: 100%;
         }
         
@@ -111,7 +110,6 @@
             font-size: 18px;
             color: var(--muted);
         }
-        /* painel da previsão: retângulo atrás dos dias */
         
         .forecast-wrapper {
             width: 100%;
@@ -125,23 +123,18 @@
             position: absolute;
             inset: auto 0 0 0;
             height: 130px;
-            /* altura do retângulo */
             background: rgba(139, 138, 138, 0.85);
             border-radius: 12px;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
             z-index: 0;
-            max-width: 100%;
         }
         
         .days {
             width: 100%;
-            max-width: 100%;
             display: flex;
             justify-content: space-between;
-            font-size: 18px;
             position: relative;
             z-index: 1;
-            /* acima do retângulo */
             padding: 16px 24px;
         }
         
@@ -157,60 +150,39 @@
         
         .day img {
             height: 40px;
-            margin-bottom: 0;
         }
-        /* responsividade simples */
         
         @media (max-width: 700px) {
-            .card {
-                padding: 20px;
-                border-radius: 16px;
-            }
             .temp {
                 font-size: 56px;
             }
             .icon {
                 height: 90px;
             }
-            .top {
-                font-size: 18px;
-            }
-            .days {
-                margin-top: 30px;
-                font-size: 14px;
-                gap: 8px;
-            }
-            .updated {
-                font-size: 12px;
-            }
             .forecast-bg {
                 height: 160px;
-            }
-            .day {
-                width: 24%;
             }
         }
     </style>
 </head>
 
 <body>
-    <!-- Background + película -->
     <div class="bg" id="bg">
         <div class="overlay"></div>
     </div>
 
     <div class="wrap">
-        <div class="card" role="region" aria-label="Painel de previsão">
+        <div class="card">
             <div class="top">
                 <div class="city-block">
                     <div class="label">Clima Atual</div>
-                    <div id="city">Detectando...</div>
-                    <div id="updated" class="updated">Última atualização: --/--/---- --:--</div>
+                    <div id="city">Sincronizando...</div>
+                    <div id="updated" class="updated">Aguardando vínculo...</div>
                 </div>
                 <div id="clock">--:--</div>
             </div>
 
-            <img id="icon" class="icon" src="" alt="Ícone do tempo">
+            <img id="icon" class="icon" src="" alt="">
             <div class="temp" id="temp">--°C</div>
             <div class="cond" id="cond">--</div>
 
@@ -218,187 +190,188 @@
                 Sensação: <span id="feel">--°C</span> • Vento: <span id="wind">-- km/h</span> • Umidade: <span id="hum">--%</span>
             </div>
 
-            <!-- Forecast com fundo retangular -->
-            <div class="forecast-wrapper" aria-hidden="false">
-                <div class="forecast-bg" aria-hidden="true"></div>
-                <div class="days" id="forecast" role="list"></div>
+            <div class="forecast-wrapper">
+                <div class="forecast-bg"></div>
+                <div id="forecast" class="days"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- Catálogo de situações (mapeamento de nomes -> arquivos em Icons/) ---
+        // 1. CONFIGURAÇÃO FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyDiTbWSlcKpsPEtEzPkSU0jHZkfcAg5fNU",
+            authDomain: "newsmartonapp.firebaseapp.com",
+            projectId: "newsmartonapp",
+            databaseURL: "https://newsmartonapp-default-rtdb.firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 2. CATÁLOGO DE ATIVOS
         const CATALOG = {
-            // backgrounds / fotos
             DiaAberto: "Icons/DiaAberto.jpg",
             NoiteAberta: "Icons/NoiteAberta.jpg",
             Chuvoso: "Icons/Chuvoso.jpg",
             Nublado: "Icons/Nublado.jpg",
             tempestade: "Icons/tempestade.jpg",
-
-            // ícones menores (painel)
             IconEnsolarado: "Icons/IconEnsolarado.png",
             IconNoite: "Icons/IconNoite.png",
             IconNublado: "Icons/IconNublado.png",
             IconChuva: "Icons/IconChuva.png",
-            IconTempestade: "Icons/IconTempestade.png",
-
-            // variações (se quiser adicionar)
-            IconChuvaEntreSol: "Icons/IconChuvaEntreSol.png",
-            IconDiaVentoso: "Icons/IconDiaVentoso.png"
+            IconTempestade: "Icons/IconTempestade.png"
         };
 
-        // Utilitários
-        function safeCatalog(name) {
-            return CATALOG[name] || "";
-        }
+        // 3. VARIÁVEIS DE ESTADO
+        let deviceId = localStorage.getItem("painelDeviceId") || "dev-" + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("painelDeviceId", deviceId);
 
-        // Atualiza o relógio
+        let currentUid = localStorage.getItem("painelUid");
+        let cidadeTerminal = "Bertioga, SP";
+        let indexRegional = 0;
+
+        const regioesBrasil = {
+            "Baixada Santista": ["Bertioga, SP", "Guarujá, SP", "Santos, SP", "São Vicente, SP", "Praia Grande, SP", "Mongaguá, SP"],
+            "Litoral Norte SP": ["São Sebastião, SP", "Ilhabela, SP", "Caraguatatuba, SP", "Ubatuba, SP"],
+            "Grande São Paulo": ["São Paulo, SP", "Guarulhos, SP", "Osasco, SP", "São Bernardo, SP", "Santo André, SP", "Barueri, SP"],
+            "Rio de Janeiro": ["Rio de Janeiro, RJ", "Niterói, RJ", "Duque de Caxias, RJ", "Nova Iguaçu, RJ"],
+            "Grande Salvador": ["Salvador, BA", "Lauro de Freitas, BA", "Camaçari, BA"],
+            "Grande Recife": ["Recife, PE", "Olinda, PE", "Jaboatão dos Guararapes, PE"]
+        };
+
+        // 4. LÓGICA DE INTERFACE
         function updateClock() {
-            const now = new Date();
-            document.getElementById("clock").textContent = now.toLocaleTimeString([], {
+            document.getElementById("clock").textContent = new Date().toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit"
             });
         }
-        setInterval(updateClock, 1000);
-        updateClock();
 
-        function formatDateTimeForDisplay(dateObj) {
-            return dateObj.toLocaleString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        // Funções que usam o catálogo
         function bgFor(code, hour) {
             const night = (hour < 6 || hour >= 18);
-
-            if (code === 0) return night ? safeCatalog("NoiteAberta") : safeCatalog("DiaAberto");
-            if (code === 1 || code === 2) return night ? safeCatalog("NoiteAberta") : safeCatalog("DiaAberto");
-            if (code === 3 || code === 45 || code === 48) return safeCatalog("Nublado");
-            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 61 && code <= 65)) return safeCatalog("Chuvoso");
-            if (code >= 95 && code <= 99) return safeCatalog("tempestade");
-            return safeCatalog("Nublado");
+            if (code <= 1) return night ? CATALOG.NoiteAberta : CATALOG.DiaAberto;
+            if (code <= 3) return CATALOG.Nublado;
+            if (code >= 95) return CATALOG.tempestade;
+            return CATALOG.Chuvoso;
         }
 
         function iconFor(code, hour) {
             const night = (hour < 6 || hour >= 18);
-
-            if (code === 0) return night ? safeCatalog("IconNoite") : safeCatalog("IconEnsolarado");
-            if (code === 1) return night ? safeCatalog("IconNoite") : safeCatalog("IconEnsolarado");
-            if (code === 2) return safeCatalog("IconEnsolarado"); // parcialmente claro
-            if (code === 3) return safeCatalog("IconNublado");
-            if ((code >= 51 && code <= 67) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)) return safeCatalog("IconChuva");
-            if (code >= 95 && code <= 99) return safeCatalog("IconTempestade");
-            if (code === 45 || code === 48) return safeCatalog("IconNublado");
-            return night ? safeCatalog("IconNoite") : safeCatalog("IconEnsolarado");
+            if (code <= 1) return night ? CATALOG.IconNoite : CATALOG.IconEnsolarado;
+            if (code <= 3) return CATALOG.IconNublado;
+            if (code >= 95) return CATALOG.IconTempestade;
+            return CATALOG.IconChuva;
         }
 
-        function descFor(code, hour) {
-            if (code === 0) return (hour < 6 || hour >= 18) ? "Céu Limpo (noite)" : "Ensolarado";
-            if (code === 1) return "Parcialmente Claro";
-            if (code === 2) return "Parcialmente Nublado";
-            if (code === 3) return "Nublado";
-            if (code === 45 || code === 48) return "Neblina";
-            if ((code >= 51 && code <= 67) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)) return "Chuva";
-            if (code >= 71 && code <= 77) return "Neve";
-            if (code >= 95 && code <= 99) return "Tempestade";
-            return "Nublado";
+        function descFor(code) {
+            if (code === 0) return "Céu Limpo";
+            if (code <= 3) return "Parcialmente Nublado";
+            if (code >= 95) return "Tempestade";
+            return "Chuva";
         }
 
-        // Para debug/consulta rápida: exibe catálogo no console
-        console.log("CATALOG:", CATALOG);
-
-        // ---------- AQUI: usamos coordenadas fixas de Bertioga (não pede GPS) ----------
-        (async function fetchFixedBertioga() {
+        // 5. MOTORES DE DADOS
+        async function obterCoordenadas(cidade) {
             try {
-                // coordenadas fixas de Bertioga
-                const lat = -23.8544;
-                const lon = -46.1396;
+                const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cidade)}&limit=1`);
+                const d = await r.json();
+                return d.length > 0 ? {
+                    lat: d[0].lat,
+                    lon: d[0].lon
+                } : {
+                    lat: -23.8544,
+                    lon: -46.1396
+                };
+            } catch {
+                return {
+                    lat: -23.8544,
+                    lon: -46.1396
+                };
+            }
+        }
 
-                // define cidade fixa
-                document.getElementById("city").textContent = "Bertioga";
-
-                const api = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`);
-                const d = await api.json();
-
+        async function fetchWeather(lat, lon, cidadeNome) {
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`;
+                const r = await fetch(url);
+                const d = await r.json();
                 const cw = d.current_weather;
                 const hr = new Date().getHours();
 
-                // BG
-                const backgroundPath = bgFor(cw.weathercode, hr);
-                if (backgroundPath) document.getElementById("bg").style.backgroundImage = `url('${backgroundPath}')`;
+                // UI Principal
+                document.getElementById("city").innerText = cidadeNome;
+                document.getElementById("temp").innerText = Math.round(cw.temperature) + "°C";
+                document.getElementById("feel").innerText = Math.round(cw.temperature) + "°C";
+                document.getElementById("cond").innerText = descFor(cw.weathercode);
+                document.getElementById("wind").innerText = cw.windspeed + " km/h";
+                document.getElementById("bg").style.backgroundImage = `url('${bgFor(cw.weathercode, hr)}')`;
+                document.getElementById("icon").src = iconFor(cw.weathercode, hr);
+                document.getElementById("updated").innerText = "Atualizado: " + new Date().toLocaleTimeString();
 
-                // valores principais
-                document.getElementById("temp").textContent = Math.round(cw.temperature) + "°C";
-                document.getElementById("feel").textContent = Math.round(cw.temperature) + "°C";
-                document.getElementById("cond").textContent = descFor(cw.weathercode, hr);
-                document.getElementById("wind").textContent = cw.windspeed + " km/h";
-                document.getElementById("hum").textContent = d.current_weather && d.current_weather.relativehumidity ? d.current_weather.relativehumidity + "%" : "--";
-
-                // ícone do painel
-                const iconPath = iconFor(cw.weathercode, hr);
-                if (iconPath) document.getElementById("icon").src = iconPath;
-
-                // última atualização (usa cw.time se disponível)
-                let updatedText = "Última atualização: --/--/---- --:--";
-                try {
-                    if (cw && cw.time) {
-                        updatedText = "Última atualização: " + formatDateTimeForDisplay(new Date(cw.time));
-                    } else {
-                        updatedText = "Última atualização: " + formatDateTimeForDisplay(new Date());
-                    }
-                } catch (e) {
-                    updatedText = "Última atualização: " + formatDateTimeForDisplay(new Date());
-                }
-                document.getElementById("updated").textContent = updatedText;
-
-                // === BLOCO: previsão 4 dias (com mapeamento de índice -> date -> tmax/tmin) ===
+                // Forecast
                 let html = "";
-                console.log("Mapeamento diário (index -> date -> tmax/tmin):");
-
-                for (let i = 1; i <= 4 && i < d.daily.time.length; i++) {
-                    const dateStr = d.daily.time[i]; // "YYYY-MM-DD"
-                    // força interpretação como meia-noite LOCAL (evita deslocamento UTC)
-                    const localDate = new Date(dateStr + "T00:00:00");
+                for (let i = 1; i <= 4; i++) {
+                    const localDate = new Date(d.daily.time[i] + "T00:00:00");
                     const dayName = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][localDate.getDay()];
-
-                    // valores de temperatura
-                    const tmin = Math.round(d.daily.temperature_2m_min[i]);
-                    const tmax = Math.round(d.daily.temperature_2m_max[i]);
-
-                    console.log(`${i} -> ${dateStr} (${dayName}) -> max:${tmax} / min:${tmin}`);
-
-                    // escolhe ícone pequeno a partir do weathercode
-                    const wc = d.daily.weathercode[i];
-                    let smallIcon = "Icons/IconNublado.png"; // fallback padrão
-                    if (wc === 0) smallIcon = "Icons/IconEnsolarado.png";
-                    else if (wc >= 51 && wc <= 82) smallIcon = "Icons/IconChuva.png";
-                    else if (wc >= 95 && wc <= 99) smallIcon = "Icons/IconTempestade.png";
-
-                    // monta o HTML
                     html += `
-      <div class="day" role="listitem" aria-label="Previsão ${dayName}">
-        <img src="${smallIcon}" alt="${descFor(wc, 12)}">
-        <div>${dayName}</div>
-        <div>${tmax}°C / ${tmin}°C</div>
-      </div>`;
+                        <div class="day">
+                            <img src="${iconFor(d.daily.weathercode[i], 12)}">
+                            <div>${dayName}</div>
+                            <div>${Math.round(d.daily.temperature_2m_max[i])}° / ${Math.round(d.daily.temperature_2m_min[i])}°</div>
+                        </div>`;
                 }
-
-                // insere o conteúdo no painel
                 document.getElementById("forecast").innerHTML = html;
-
             } catch (err) {
-                console.error(err);
-                alert("Erro ao obter dados do clima. Verifique a conexão.");
+                console.error("Erro API Clima:", err);
             }
-        })();
-        // ---------------------------------------------------------------------------
+        }
+
+        async function rodarSistemaClima() {
+            let regiao = Object.keys(regioesBrasil).find(r => regioesBrasil[r].includes(cidadeTerminal));
+            let lista = regiao ? regioesBrasil[regiao] : [cidadeTerminal];
+            let cidadeAtual = lista[indexRegional];
+
+            const coords = await obterCoordenadas(cidadeAtual);
+            await fetchWeather(coords.lat, coords.lon, cidadeAtual);
+
+            indexRegional = (indexRegional + 1) % lista.length;
+        }
+
+        // 6. VÍNCULO E INICIALIZAÇÃO
+        async function verificarVinculo() {
+            if (!currentUid) {
+                // Escuta em tempo real se algum admin reivindica este deviceId
+                db.collectionGroup("dispositivos").where("deviceId", "==", deviceId)
+                    .onSnapshot(snap => {
+                        snap.forEach(doc => {
+                            const uidEncontrado = doc.ref.parent.parent.id;
+                            localStorage.setItem("painelUid", uidEncontrado);
+                            location.reload();
+                        });
+                    });
+                return;
+            }
+
+            // Se já tem UID, carrega a cidade do banco
+            const doc = await db.collection("usuarios").doc(currentUid)
+                .collection("dispositivos").doc(deviceId).get();
+
+            if (doc.exists) {
+                cidadeTerminal = doc.data().cidade || cidadeTerminal;
+            }
+
+            init();
+        }
+
+        function init() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            rodarSistemaClima();
+            setInterval(rodarSistemaClima, 600000); // 10 minutos
+        }
+
+        // Início de tudo
+        verificarVinculo();
     </script>
 </body>
 
