@@ -209,20 +209,21 @@
         const db = firebase.firestore();
 
         // 2. CATÁLOGO DE ATIVOS (Caminhos Revisados)
+// 2. CATÁLOGO DE ATIVOS (Caminhos Corrigidos para 'icons/')
         const CATALOG = {
-            // Backgrounds
-            DiaAberto: "Icons/DiaAberto.jpg",
-            NoiteAberta: "Icons/NoiteAberta.jpg",
-            Chuvoso: "Icons/Chuvoso.jpg",
-            Nublado: "Icons/Nublado.jpg",
-            tempestade: "Icons/tempestade.jpg",
+            // Backgrounds - Note o 'i' minúsculo para coincidir com sua pasta
+            DiaAberto: "icons/DiaAberto.jpg",
+            NoiteAberta: "icons/NoiteAberta.jpg",
+            Chuvoso: "icons/Chuvoso.jpg",
+            Nublado: "icons/Nublado.jpg",
+            tempestade: "icons/tempestade.jpeg", // Corrigido de .jpg para .jpeg conforme imagem 8c54b7
 
-            // Ícones
-            IconEnsolarado: "Icons/IconEnsolarado.png",
-            IconNoite: "Icons/IconNoite.png",
-            IconNublado: "Icons/IconNublado.png",
-            IconChuva: "Icons/IconChuva.png",
-            IconTempestade: "Icons/IconTempestade.png"
+            // Ícones - Note o 'i' minúsculo
+            IconEnsolarado: "icons/IconEnsolarado.png",
+            IconNoite: "icons/IconNoite.png",
+            IconNublado: "icons/IconNublado.png",
+            IconChuva: "icons/IconChuva.png",
+            IconTempestade: "icons/IconTempestade.png"
         };
 
         // 3. VARIÁVEIS DE ESTADO
@@ -231,7 +232,7 @@
 
         let currentUid = localStorage.getItem("painelUid");
         let cidadeTerminal = "Bertioga, SP";
-        let indexRegional = 0;
+        let indexRegional = 0; // Esta variável resolve o erro 'cidadeIndex is not defined' se usada corretamente
 
         const regioesBrasil = {
             // --- SUDESTE ---
@@ -407,3 +408,4 @@
 </body>
 
 </html>
+
