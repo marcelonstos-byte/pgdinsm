@@ -55,6 +55,7 @@
             justify-content: center;
             padding: 20px;
         }
+        /* EFEITO FADE-IN INICIAL */
         
         .card {
             width: 80vw;
@@ -67,6 +68,14 @@
             flex-direction: column;
             align-items: center;
             position: relative;
+            opacity: 0;
+            /* Começa invisível */
+            transition: opacity 1s ease-in-out;
+        }
+        
+        .card.visible {
+            opacity: 1;
+            /* Torna-se visível */
         }
         
         .top {
@@ -172,7 +181,7 @@
     </div>
 
     <div class="wrap">
-        <div class="card">
+        <div class="card" id="mainCard">
             <div class="top">
                 <div class="city-block">
                     <div class="label">Clima Atual</div>
@@ -208,17 +217,14 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 2. CATÁLOGO DE ATIVOS (Caminhos Revisados)
-// 2. CATÁLOGO DE ATIVOS (Caminhos Corrigidos para 'icons/')
+        // 2. CATÁLOGO DE ATIVOS (Caminhos Corrigidos para 'icons/')
         const CATALOG = {
-            // Backgrounds - Note o 'i' minúsculo para coincidir com sua pasta
             DiaAberto: "icons/DiaAberto.jpg",
             NoiteAberta: "icons/NoiteAberta.jpg",
             Chuvoso: "icons/Chuvoso.jpg",
             Nublado: "icons/Nublado.jpg",
-            tempestade: "icons/tempestade.jpeg", // Corrigido de .jpg para .jpeg conforme imagem 8c54b7
+            tempestade: "icons/tempestade.jpeg",
 
-            // Ícones - Note o 'i' minúsculo
             IconEnsolarado: "icons/IconEnsolarado.png",
             IconNoite: "icons/IconNoite.png",
             IconNublado: "icons/IconNublado.png",
@@ -232,36 +238,26 @@
 
         let currentUid = localStorage.getItem("painelUid");
         let cidadeTerminal = "Bertioga, SP";
-        let indexRegional = 0; // Esta variável resolve o erro 'cidadeIndex is not defined' se usada corretamente
+        let indexRegional = 0;
 
         const regioesBrasil = {
-            // --- SUDESTE ---
             "Baixada Santista": ["Bertioga, SP", "Guarujá, SP", "Santos, SP", "São Vicente, SP", "Praia Grande, SP", "Mongaguá, SP"],
             "Litoral Norte SP": ["São Sebastião, SP", "Ilhabela, SP", "Caraguatatuba, SP", "Ubatuba, SP"],
             "Grande São Paulo": ["São Paulo, SP", "Guarulhos, SP", "Osasco, SP", "São Bernardo, SP", "Santo André, SP", "Barueri, SP"],
             "Rio de Janeiro": ["Rio de Janeiro, RJ", "Niterói, RJ", "Duque de Caxias, RJ", "Nova Iguaçu, RJ", "São Gonçalo, RJ"],
             "Grande Belo Horizonte": ["Belo Horizonte, MG", "Contagem, MG", "Betim, MG", "Nova Lima, MG", "Sabará, MG"],
             "Grande Vitória": ["Vitória, ES", "Vila Velha, ES", "Serra, ES", "Cariacica, ES"],
-
-            // --- SUL ---
             "Grande Curitiba": ["Curitiba, PR", "São José dos Pinhais, PR", "Pinhais, PR", "Araucária, PR", "Colombo, PR"],
             "Grande Porto Alegre": ["Porto Alegre, RS", "Canoas, RS", "Novo Hamburgo, RS", "São Leopoldo, RS", "Gravataí, RS"],
             "Grande Florianópolis": ["Florianópolis, SC", "São José, SC", "Palhoça, SC", "Biguaçu, SC"],
-
-            // --- NORDESTE ---
             "Grande Salvador": ["Salvador, BA", "Lauro de Freitas, BA", "Camaçari, BA", "Simões Filho, BA"],
             "Grande Recife": ["Recife, PE", "Olinda, PE", "Jaboatão dos Guararapes, PE", "Paulista, PE"],
             "Grande Fortaleza": ["Fortaleza, CE", "Caucaia, CE", "Maracanaú, CE", "Eusébio, CE"],
             "Grande Natal": ["Natal, RN", "Parnamirim, RN", "São Gonçalo do Amarante, RN", "Macaíba, RN"],
-
-            // --- CENTRO-OESTE ---
             "Distrito Federal e Entorno": ["Brasília, DF", "Taguatinga, DF", "Ceilândia, DF", "Águas Lindas de Goiás, GO"],
             "Grande Goiânia": ["Goiânia, GO", "Aparecida de Goiânia, GO", "Anápolis, GO", "Senador Canedo, GO"],
-
-            // --- NORTE ---
             "Grande Manaus": ["Manaus, AM", "Iranduba, AM", "Manacapuru, AM", "Careiro, AM"],
             "Grande Belém": ["Belém, PA", "Ananindeua, PA", "Marituba, PA", "Benevides, PA"]
-                // Você pode alimentar esta lista com as regiões de atuação do seu software.
         };
 
         // 4. LÓGICA DE INTERFACE
@@ -272,7 +268,6 @@
             });
         }
 
-        // Seleção de Background baseada no código e hora
         function bgFor(code, hour) {
             const night = (hour < 6 || hour >= 18);
             if (code === 0 || code === 1) return night ? CATALOG.NoiteAberta : CATALOG.DiaAberto;
@@ -281,7 +276,6 @@
             return CATALOG.Chuvoso;
         }
 
-        // Seleção de Ícone baseada no código e hora
         function iconFor(code, hour) {
             const night = (hour < 6 || hour >= 18);
             if (code === 0 || code === 1) return night ? CATALOG.IconNoite : CATALOG.IconEnsolarado;
@@ -326,19 +320,16 @@
                 const cw = d.current_weather;
                 const hr = new Date().getHours();
 
-                // UI Principal
                 document.getElementById("city").innerText = cidadeNome;
                 document.getElementById("temp").innerText = Math.round(cw.temperature) + "°C";
                 document.getElementById("feel").innerText = Math.round(cw.temperature) + "°C";
                 document.getElementById("cond").innerText = descFor(cw.weathercode);
                 document.getElementById("wind").innerText = cw.windspeed + " km/h";
 
-                // Aplicando Imagens do Catálogo
                 document.getElementById("bg").style.backgroundImage = `url('${bgFor(cw.weathercode, hr)}')`;
                 document.getElementById("icon").src = iconFor(cw.weathercode, hr);
                 document.getElementById("updated").innerText = "Atualizado: " + new Date().toLocaleTimeString();
 
-                // Forecast (Previsão 4 dias)
                 let html = "";
                 for (let i = 1; i <= 4; i++) {
                     const localDate = new Date(d.daily.time[i] + "T00:00:00");
@@ -353,6 +344,12 @@
                         </div>`;
                 }
                 document.getElementById("forecast").innerHTML = html;
+
+                // REVELA O CARD APÓS A PRIMEIRA CARGA (EFEITO FADE-IN)
+                setTimeout(() => {
+                    document.getElementById("mainCard").classList.add("visible");
+                }, 500);
+
             } catch (err) {
                 console.error("Erro API Clima:", err);
             }
@@ -381,7 +378,6 @@
                         });
                     });
 
-                // Se não há UID, roda com Bertioga por padrão até vincular
                 init();
                 return;
             }
@@ -400,7 +396,7 @@
             updateClock();
             setInterval(updateClock, 1000);
             rodarSistemaClima();
-            setInterval(rodarSistemaClima, 600000); // Roda a cada 10 minutos
+            setInterval(rodarSistemaClima, 600000);
         }
 
         verificarVinculo();
@@ -408,4 +404,3 @@
 </body>
 
 </html>
-
